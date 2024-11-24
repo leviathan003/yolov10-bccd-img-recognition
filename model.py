@@ -1,53 +1,15 @@
 import os
 import cv2
-import time
-import torch
+import numpy as np
+from PIL import Image
 from ultralytics import YOLOv10
 from collections import defaultdict
-
-weights_path = "./outputs/content/runs/detect/train/weights/last.pt"
-model = YOLOv10(weights_path)
 
 def process_results(results):
     classes = list(results[0].boxes.cls)
     dims = list(results[0].boxes.xywhn)
 
     return list(zip(classes, dims)) 
-
-def detect_classes(img,out_path,filename):
-    image = cv2.imread(img)
-    if image is None:
-        print(f"Error: Could not load image at {img}")
-        return
-
-    class_colors = {
-        0: (0, 0, 255),  # Red for class 0 (RBC)
-        1: (255, 0, 0),  # Blue for class 1 (WBC)
-        2: (0, 255, 0),  # Green for class 2 (Platelets)
-    }
-
-    results = model.predict(image, conf=0.5)
-
-    for result in results:
-        for box in result.boxes:
-            x_min, y_min, x_max, y_max = map(int, box.xyxy[0].tolist())
-            class_id = int(box.cls[0])
-            confidence = box.conf[0]
-            label = f"{result.names[class_id]} {confidence:.2f}"
-            color = class_colors.get(class_id, (255, 255, 255))
-
-            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
-            cv2.putText(image, label, (x_min+10, y_max - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-    out_path = out_path+filename+".jpg"
-    try:
-        cv2.imwrite(out_path, image)
-        print(f"Updated image saved to {out_path}")
-    except Exception as e:
-        print(f"Failed to save image at {out_path}")
-        return
-    processed_results = process_results(results)
-    return processed_results
 
 def get_ground_truth(file_path):
     if not os.path.exists(file_path):
@@ -140,23 +102,52 @@ def calculate_metrics(predictions, ground_truths, iou_threshold=0.5):
     return class_metrics, overall_metrics
 
 
+def detect_classes(image,out_path,filename,weights='last'):
 
-img_shape = (480,640)
-filename = "BloodImage_00409"
-img_ext = ".jpg"
-txt_ext = ".txt"
-in_img_path = "./data/images/train/"+filename+img_ext
-out_img_path = "./results/"
-annot_file = "./data/labels/train/"+filename+txt_ext
-start_time = time.time()
+    if isinstance(image, Image.Image):  # Check if it's a PIL image
+        image = np.array(image)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    elif isinstance(image, str): # Check if it's a path
+        image = cv2.imread(image)
 
-pred = detect_classes(in_img_path,out_img_path,filename)
-ground_truth = get_ground_truth(annot_file)
-class_metrics, overall_metrics = calculate_metrics(pred, ground_truth)
+    if image is None:
+        print(f"Error: Could not load image at {image}")
+        return
 
-print("Class Metrics:", class_metrics)
-print("Overall Metrics:", overall_metrics)
-end_time = time.time()
+    class_colors = {
+        0: (0, 0, 255),  # Red for class 0 (RBC)
+        1: (255, 0, 0),  # Blue for class 1 (WBC)
+        2: (21, 51, 10),  # Green for class 2 (Platelets)
+    }
 
-print(f"\nExecution completed in {end_time-start_time}s")
+    weights_path = f"./outputs/content/runs/detect/train/weights/{weights}.pt"
+    model = YOLOv10(weights_path)
+    results = model.predict(image, conf=0.5)
 
+    for result in results:
+        for box in result.boxes:
+            x_min, y_min, x_max, y_max = map(int, box.xyxy[0].tolist())
+            class_id = int(box.cls[0])
+            confidence = box.conf[0]
+            label = f"{result.names[class_id]} {confidence:.2f}"
+            color = class_colors.get(class_id, (255, 255, 255))
+
+            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), color, 2)
+            cv2.putText(image, label, (x_min+10, y_max - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    # out_path = out_path+filename+".jpg"
+    # try:
+    #     cv2.imwrite(out_path, image)
+    #     print(f"Updated image saved to {out_path}")
+    # except Exception as e:
+    #     print(f"Failed to save image at {out_path}")
+    #     return
+    
+    annotated_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(annotated_image)
+
+    processed_results = process_results(results)
+    ground_truth = get_ground_truth("./data/labels/train/"+filename+".txt")
+    class_metrics, overall_metrics = calculate_metrics(processed_results, ground_truth)
+
+    return class_metrics, overall_metrics, pil_image
