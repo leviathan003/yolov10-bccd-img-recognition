@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image
-from ultralytics import YOLOv10
+from ultralytics import YOLO
 from collections import defaultdict
 
 def process_results(results):
@@ -121,7 +121,7 @@ def detect_classes(image,out_path,filename,weights='last'):
     }
 
     weights_path = f"./outputs/content/runs/detect/train/weights/{weights}.pt"
-    model = YOLOv10(weights_path)
+    model = YOLO(weights_path)
     results = model.predict(image, conf=0.5)
 
     for result in results:
