@@ -4,12 +4,14 @@ from PIL import Image
 import streamlit as st
 from model import detect_classes
 
+# Config for side menu
 st.set_page_config(
     page_title="Side Menu Example",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
+# CSS for side menu
 st.markdown(
     """
     <style>
@@ -23,20 +25,26 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Side menu
 st.sidebar.title("Choose Weights")
 option = st.sidebar.selectbox(
     "Choose weights:",
     ["Last", "Best"]
 )
 
+# Title
 st.markdown("<h1 style='font-size: 38px; font-family:Ubuntu ; text-align:center;'>Object Detection with YOLOv10 on BCCD Dataset</h1>", unsafe_allow_html=True)
 
+# Info-1
 st.markdown("<h1 style='font-size:18px; font-family:Ubuntu ; text-align:center;'>The following application performs object detection, i.e. in this case blood cell type detection between the classes RBC, WBC and Platelets, draws bounding boxes around them and displays the confidence score and class of each box within it. It also displays the overall precison and overall recall of the model as well as precison and recall on each class.</h1>", unsafe_allow_html=True)
 
+# Info-2
 st.markdown("<h1 style='font-size:18px; font-family:Ubuntu ; text-align:center;'>The model has two weights, Best and Last(default).</br> Toggle between the weights by going to the sidebar and choosing the weight that suits you best.</h1>", unsafe_allow_html=True)
 
+# Instruct
 st.markdown("<h1 style='font-size:20px; font-family:Ubuntu ; text-align:center;'>Upload a sample image to perfrom object detection on the image</h1>", unsafe_allow_html=True)
 
+# Detect Button CSS
 st.markdown(
     """
     <style>
@@ -61,6 +69,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+#Image display CSS
 st.markdown(
     """
     <style>
@@ -77,6 +86,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Display original image ,processed image and metrics function
 def display_images_metrics(uploaded_image, processed_image, class_metrics, overall_metrics):
     st.markdown("<h1 style='font-size:20px; font-family:Ubuntu ; text-align:center;'></br>Results</h1>", unsafe_allow_html=True)
     img_col1, img_col2 = st.columns(2)
@@ -102,11 +112,13 @@ def display_images_metrics(uploaded_image, processed_image, class_metrics, overa
         st.markdown("<h1 style='font-size:20px; font-family:Ubuntu ; text-align:center;'>Overall Metrics</h1>", unsafe_allow_html=True)
         st.table(df_overall_metrics)
         
+# Download processed image function
 def download_processed_image(image, filename):
     img_byte_arr = io.BytesIO()
     image.save(img_byte_arr, format="JPEG")
     img_byte_arr.seek(0)
 
+    # Download button CSS
     st.markdown(
         """
         <style>
@@ -126,6 +138,7 @@ def download_processed_image(image, filename):
         unsafe_allow_html=True
     )
 
+    # Download button
     st.download_button(
         label="⤓ Download Processed Image",
         data=img_byte_arr,
@@ -134,13 +147,17 @@ def download_processed_image(image, filename):
         use_container_width=True
     )
 
+# Global metrics and uploaded file variables 
 class_metrics, overall_metrics = None, None
 uploaded_file = st.file_uploader(".", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
 
+# Validation of file and activation of Detect button
 if uploaded_file is not None:
     file_name = uploaded_file.name
     uploaded_image = Image.open(uploaded_file)
     st.write("Image uploaded successfully!")
+    
+    # Detect button
     if st.button("🔍 Detect"):
         if option == "Last":
             class_metrics, overall_metrics, processed_img = detect_classes(uploaded_image,"./results/",file_name[:-4],'last')

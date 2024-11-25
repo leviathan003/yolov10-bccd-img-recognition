@@ -5,12 +5,14 @@ from PIL import Image
 from ultralytics import YOLO
 from collections import defaultdict
 
+# Function to process the results of the object detected image to make it compatible for metric calculation
 def process_results(results):
     classes = list(results[0].boxes.cls)
     dims = list(results[0].boxes.xywhn)
 
     return list(zip(classes, dims)) 
 
+# Function to get the ground truth of the annotations from the annotation file of that image
 def get_ground_truth(file_path):
     if not os.path.exists(file_path):
         print("File does not exist.")
@@ -24,6 +26,7 @@ def get_ground_truth(file_path):
     
     return tuples_list
 
+# Function to calculate intersection over union essential to find the precision and recall
 def iou(box1, box2):
     x1_min = box1[0] - box1[2] / 2
     y1_min = box1[1] - box1[3] / 2
@@ -48,7 +51,7 @@ def iou(box1, box2):
     union_area = area1 + area2 - inter_area
     return inter_area / union_area if union_area > 0 else 0
 
-
+# Function to calculate the precison and recall metrics
 def calculate_metrics(predictions, ground_truths, iou_threshold=0.5):
     predictions = [(int(pred[0].item()), pred[1].tolist()) for pred in predictions]
     annotations = [[int(ann[0]), *ann[1:]] for ann in ground_truths]
@@ -101,7 +104,7 @@ def calculate_metrics(predictions, ground_truths, iou_threshold=0.5):
 
     return class_metrics, overall_metrics
 
-
+# Calling function to detect objects
 def detect_classes(image,out_path,filename,weights='last'):
 
     if isinstance(image, Image.Image):  # Check if it's a PIL image
